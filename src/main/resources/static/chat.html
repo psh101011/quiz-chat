@@ -11,6 +11,7 @@
     .msg { margin-bottom: 5px; }
     .user { color: blue; }
     .server { color: green; }
+    .mine { color: darkorange; font-weight: bold; }
     input { padding: 8px; width: 70%; }
     button { padding: 8px 16px; }
   </style>
@@ -28,17 +29,15 @@
     const params = new URLSearchParams(window.location.search);
     const roomId = params.get("room");
     const userId = params.get("user");
+    const quizId = params.get("quiz");
+
     let stompClient;
     let currentIndex = 0;
-
-    const questions = [
-      { question: "사과를 영어로 하면?", answer: "apple" },
-      { question: "바나나를 영어로 하면?", answer: "banana" },
-      { question: "고양이를 영어로 하면?", answer: "cat" }
-    ];
+    let currentQuiz = [];
 
     function showQuestion() {
-      document.getElementById("question").innerText = "문제: " + questions[currentIndex].question;
+      const q = currentQuiz[currentIndex];
+      document.getElementById("question").innerText = "문제: " + q.question;
     }
 
     function addMessage(text, type = 'server') {
@@ -50,13 +49,29 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function connectSocket() {
+    async function loadQuizSet() {
+      const [quizRes, indexRes] = await Promise.all([
+        fetch(`/api/quiz/${quizId}`),
+        fetch(`/api/room/${roomId}/index`)
+      ]);
+      currentQuiz = await quizRes.json();
+      currentIndex = await indexRes.json();
+    }
+
+    function connectSocketAndLoadQuiz() {
       const socket = new SockJS("/quiz-ws");
       stompClient = Stomp.over(socket);
 
       stompClient.connect({}, () => {
+        stompClient.send(`/app/room/${roomId}/join`, {}, JSON.stringify({
+          user: userId,
+          quizId: quizId
+        }));
+
         stompClient.subscribe(`/topic/room/${roomId}/chat`, msg => {
-          addMessage("💬 " + msg.body, 'user');
+          const text = msg.body;
+          const isMine = text.startsWith(`${userId}:`);
+          addMessage(isMine ? `🙋 ${text}` : `💬 ${text}`, isMine ? 'mine' : 'user');
         });
 
         stompClient.subscribe(`/topic/room/${roomId}/correct`, msg => {
@@ -65,14 +80,16 @@
 
         stompClient.subscribe(`/topic/room/${roomId}/next`, msg => {
           currentIndex++;
-          if (currentIndex < questions.length) {
+          if (currentIndex < currentQuiz.length) {
             showQuestion();
           } else {
             addMessage("🎉 모든 문제를 맞혔습니다!", 'server');
           }
         });
 
-        showQuestion();
+        loadQuizSet().then(() => {
+          showQuestion();
+        });
       });
     }
 
@@ -88,7 +105,7 @@
       document.getElementById("answer").value = "";
     }
 
-    connectSocket();
+    connectSocketAndLoadQuiz();
   </script>
 </body>
 </html>

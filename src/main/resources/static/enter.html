@@ -14,17 +14,22 @@
   <h2>🚪 퀴즈 방 입장</h2>
   <input id="room" placeholder="방 코드 입력" /><br />
   <input id="user" placeholder="닉네임 입력" /><br />
+  <select id="quizId">
+    <option value="quiz-001">과일 이름 영어로</option>
+    <option value="quiz-002">동물 이름 영어로</option>
+  </select><br />
   <button onclick="enterRoom()">입장하기</button>
 
   <script>
     function enterRoom() {
       const room = document.getElementById("room").value.trim();
       const user = document.getElementById("user").value.trim();
-      if (!room || !user) {
-        alert("방 코드와 닉네임을 모두 입력해주세요.");
+      const quiz = document.getElementById("quizId").value;
+      if (!room || !user || !quiz) {
+        alert("모든 정보를 입력해주세요.");
         return;
       }
-      window.location.href = `chat.html?room=${room}&user=${user}`;
+      window.location.href = `chat.html?room=${room}&user=${user}&quiz=${quiz}`;
     }
   </script>
 </body>
