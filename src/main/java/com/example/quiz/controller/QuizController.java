@@ -1,4 +1,4 @@
-package com.example.quiz.controller;
+package main.java.com.example.quiz.controller;
 
 import com.example.quiz.dto.AnswerMessage;
 import org.springframework.messaging.handler.annotation.MessageMapping;
