@@ -1,4 +1,4 @@
-package main.java.com.example.quiz.config;
+package com.example.quiz.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
