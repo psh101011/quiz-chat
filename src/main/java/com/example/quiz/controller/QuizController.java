@@ -5,6 +5,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
 
 @Controller
 public class QuizController {
@@ -30,4 +31,16 @@ public class QuizController {
             messagingTemplate.convertAndSend("/topic/next", "NEXT");
         }
     }
+    @MessageMapping("/room/{roomId}/answer")
+    public void answerInRoom(@DestinationVariable String roomId, @Payload AnswerMessage message) {
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/chat",
+        message.getUser() + ": " + message.getAnswer());
+
+        if ("apple".equalsIgnoreCase(message.getAnswer().trim())) {
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/correct",
+            message.getUser() + "님이 정답을 맞혔습니다!");
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/next", "NEXT");
+    }
+    }
+
 }

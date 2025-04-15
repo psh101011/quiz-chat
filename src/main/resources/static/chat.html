@@ -1,0 +1,94 @@
+<!-- chat.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>퀴즈 채팅방</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #question { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+    #chat { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 10px; margin-bottom: 10px; }
+    .msg { margin-bottom: 5px; }
+    .user { color: blue; }
+    .server { color: green; }
+    input { padding: 8px; width: 70%; }
+    button { padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <h2>💬 퀴즈 채팅방</h2>
+  <div id="question">문제 로딩 중...</div>
+  <div id="chat"></div>
+  <input id="answer" placeholder="정답을 입력하세요" />
+  <button onclick="sendAnswer()">전송</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const roomId = params.get("room");
+    const userId = params.get("user");
+    let stompClient;
+    let currentIndex = 0;
+
+    const questions = [
+      { question: "사과를 영어로 하면?", answer: "apple" },
+      { question: "바나나를 영어로 하면?", answer: "banana" },
+      { question: "고양이를 영어로 하면?", answer: "cat" }
+    ];
+
+    function showQuestion() {
+      document.getElementById("question").innerText = "문제: " + questions[currentIndex].question;
+    }
+
+    function addMessage(text, type = 'server') {
+      const chat = document.getElementById("chat");
+      const div = document.createElement("div");
+      div.className = "msg " + type;
+      div.innerText = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function connectSocket() {
+      const socket = new SockJS("/quiz-ws");
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, () => {
+        stompClient.subscribe(`/topic/room/${roomId}/chat`, msg => {
+          addMessage("💬 " + msg.body, 'user');
+        });
+
+        stompClient.subscribe(`/topic/room/${roomId}/correct`, msg => {
+          addMessage("✔️ " + msg.body, 'server');
+        });
+
+        stompClient.subscribe(`/topic/room/${roomId}/next`, msg => {
+          currentIndex++;
+          if (currentIndex < questions.length) {
+            showQuestion();
+          } else {
+            addMessage("🎉 모든 문제를 맞혔습니다!", 'server');
+          }
+        });
+
+        showQuestion();
+      });
+    }
+
+    function sendAnswer() {
+      const answer = document.getElementById("answer").value.trim();
+      if (!answer) return;
+
+      stompClient.send(`/app/room/${roomId}/answer`, {}, JSON.stringify({
+        user: userId,
+        answer: answer
+      }));
+
+      document.getElementById("answer").value = "";
+    }
+
+    connectSocket();
+  </script>
+</body>
+</html>
